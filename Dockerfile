@@ -1,10 +1,17 @@
-FROM python:3.9
+# Utiliza una imagen base de Python
+FROM python:3.9-slim
 
+# Configura el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-COPY requirements.txt .
+# Copia los archivos de la aplicación al contenedor
+COPY . /app
+
+# Instala las dependencias necesarias
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Expone el puerto donde estará corriendo la API
+EXPOSE 8003
 
-CMD ["uvicorn", "src.infrastructure.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Comando para ejecutar la aplicación
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8003"]
