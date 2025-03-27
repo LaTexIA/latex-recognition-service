@@ -42,7 +42,7 @@ class BetterConvNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
-
+"""
 # Ruta a las clases (dataset para saber el número de clases y los nombres)
 train_data_path = 'data/train'  # <- Modifica si tu carpeta está en otra ruta
 
@@ -50,9 +50,9 @@ train_data_path = 'data/train'  # <- Modifica si tu carpeta está en otra ruta
 train_dataset = datasets.ImageFolder(root=train_data_path)
 class_names = train_dataset.classes
 num_classes = len(class_names)
-
+"""
 # Carga del modelo entrenado
-model = BetterConvNet(num_classes=num_classes)
+model = BetterConvNet(num_classes=82)
 
 # Carga los pesos entrenados
 model_path = 'model.pth'  # <- Ruta al archivo de pesos entrenado
