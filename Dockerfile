@@ -1,6 +1,13 @@
 # Utiliza una imagen base de Python
 FROM python:3.9-slim
 
+# Instalar dependencias del sistema necesarias para PyTorch
+RUN apt-get update && apt-get install -y \
+    libopenblas-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    && apt-get clean
+
 # Configura el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
