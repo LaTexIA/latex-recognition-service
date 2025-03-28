@@ -1,5 +1,5 @@
 # Utiliza una imagen base de Python
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 # Instalar dependencias del sistema necesarias para PyTorch
 RUN apt-get update && apt-get install -y \
