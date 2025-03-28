@@ -18,6 +18,7 @@ async def predict(file: UploadFile = File(...)):
     image = Image.open(io.BytesIO(image_data)).convert("RGB")
 
     # PREPROCESAMIENTO basado en PIL y ImageChops
+    """
     white_image = Image.new('RGB', image.size, (255, 255, 255))
     diff = ImageChops.difference(image, white_image)
     bbox = diff.getbbox()
@@ -27,15 +28,17 @@ async def predict(file: UploadFile = File(...)):
 
     image = image.crop(bbox)
     image = image.resize((128, 128))
-
+    """
     # Transforma a tensor normalizado
     data_transforms = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
+    transforms.Resize((52, 52)),         # Cambia el tamaño de la imagen
+    transforms.Grayscale(num_output_channels=1),  # Convierte a escala de grises
+    transforms.ToTensor(),               # Convierte la imagen a tensor
+    transforms.Normalize((0.5,), (0.5,)) # Normaliza con media 0.5 y desviación 0.5
+])
     input_tensor = data_transforms(image).unsqueeze(0).to(device)
 
     # Predicción
     predicted_index, predicted_class = predict_image_tensor(model, input_tensor, class_names)
 
-    return {"predicted_class": predicted_class, "class_index": predicted_index}
+    return {"predicted_class": predicted_class}
