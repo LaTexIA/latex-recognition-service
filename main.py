@@ -1,49 +1,44 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
+from PIL import Image, ImageChops
+import torchvision.transforms as transforms
 import torch
-import numpy as np
-import json
+import io
 
-app = FastAPI(title="Latex Recognition Service")
+# Modelo cargado
+from model import model, class_names, device  # Asegúrate de tener tu modelo ya entrenado cargado
+from predict import predict_image_tensor  # Función que definiremos aparte
 
-# Cargar el modelo entrenado
-try:
-    model = torch.jit.load('src/infrastructure/model/model.pt')
-    model.eval()  # Configurar el modelo en modo evaluación
-except Exception as e:
-    raise RuntimeError(f"Error loading model: {e}")
+app = FastAPI()
 
-@app.post("/predict")
-async def predict(request: Request):
+@app.post("/predict/")
+async def predict(file: UploadFile = File(...)):
+    # Leer imagen desde el archivo recibido
+    image_data = await file.read()
+    image = Image.open(io.BytesIO(image_data)).convert("RGB")
+
+    # PREPROCESAMIENTO basado en PIL y ImageChops
     """
-    Recibe un arreglo NumPy serializado en JSON con la imagen preprocesada,
-    lo deserializa y usa el modelo para predecir el código LaTeX.
-    Devuelve el resultado en formato JSON.
+    white_image = Image.new('RGB', image.size, (255, 255, 255))
+    diff = ImageChops.difference(image, white_image)
+    bbox = diff.getbbox()
+    
+    if bbox is None:
+        return JSONResponse(content={"error": "La imagen parece estar vacía"}, status_code=400)
+
+    image = image.crop(bbox)
+    image = image.resize((128, 128))
     """
-    try:
-        # Leer el cuerpo de la solicitud como JSON
-        data = await request.json()
-        
-        # Deserializar el arreglo NumPy desde JSON
-        image_array = np.array(json.loads(data['image_array']), dtype=np.float32)
-        
-        # Asegurarse de que el arreglo tenga la forma correcta para el modelo
-        if image_array.ndim == 3:
-            image_array = np.expand_dims(image_array, axis=0)
-        
-        # Convertir el arreglo NumPy a un tensor de PyTorch
-        input_tensor = torch.from_numpy(image_array).unsqueeze(0)
-        
-        # Realizar la predicción con el modelo
-        with torch.no_grad():
-            prediction = model(input_tensor)
-        
-        # Suponiendo que el modelo devuelve el código LaTeX como una cadena
-        latex_code = prediction.argmax(dim=1).item()  # Ajusta esto según la salida real de tu modelo
-        
-        # Devolver el resultado en formato JSON
-        return JSONResponse(content={"latex_code": latex_code})
-    except KeyError:
-        raise HTTPException(status_code=400, detail="Invalid input format. 'image_array' key is required.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
+    # Transforma a tensor normalizado
+    data_transforms = transforms.Compose([
+    transforms.Resize((52, 52)),         # Cambia el tamaño de la imagen
+    transforms.Grayscale(num_output_channels=1),  # Convierte a escala de grises
+    transforms.ToTensor(),               # Convierte la imagen a tensor
+    transforms.Normalize((0.5,), (0.5,)) # Normaliza con media 0.5 y desviación 0.5
+])
+    input_tensor = data_transforms(image).unsqueeze(0).to(device)
+
+    # Predicción
+    predicted_index, predicted_class = predict_image_tensor(model, input_tensor, class_names)
+
+    return {"predicted_class": predicted_class}
